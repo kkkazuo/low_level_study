@@ -4,7 +4,6 @@ try() {
   input="$2"
 
   ./9cc "$input" > tmp.s
-  sed -i -e s/main/_main/ tmp.s
   gcc -o tmp tmp.s
   ./tmp
   actual="$?"
