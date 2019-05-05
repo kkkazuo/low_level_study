@@ -27,6 +27,7 @@ typedef struct Node {
 Token tokens[100];
 int pos;
 Node *mul();
+Node *unary();
 Node *term();
 
 Node *new_node(int ty, Node *lhs, Node *rhs) {
@@ -66,15 +67,25 @@ Node *add(){
 }
 
 Node *mul(){
-  Node *node = term();
+  Node *node = unary();
 
   for(;;){
     if(consume('*'))
-      node = new_node('*', node, term());
+      node = new_node('*', node, unary());
     else if(consume('/'))
-      node = new_node('/', node, term());
+      node = new_node('/', node, unary());
     else
     return node;
+  }
+}
+
+Node *unary(){
+  for(;;){
+    if(consume('+'))
+      return term();
+    else if(consume('-'))
+      return new_node('-', new_node_num(0), term());
+    return term();
   }
 }
 
