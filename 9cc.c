@@ -165,22 +165,48 @@ void gen(Node *node) {
   printf("  push rax\n");
 }
 
+int expect(int line, int expected, int actual) {
+  if (expected == actual)
+    return 0;
+  fprintf(stderr, "%d: %d expected, but got %d\n", line, expected, actual);
+  exit(1);
+}
+
+void runtest() {
+  Vector *vec = new_vector();
+  expect(__LINE__, 0, vec->len);
+
+  for (int i = 0; i < 100; i++)
+    vec_push(vec, (void *)i);
+
+  expect(__LINE__, 100, vec->len);
+  expect(__LINE__, 0, (long)vec->data[0]);
+  expect(__LINE__, 50, (long)vec->data[50]);
+  expect(__LINE__, 99, (long)vec->data[99]);
+
+  printf("OK\n");
+}
+
 int main(int argc, char **argv) {
-  if (argc != 2) {
-    fprintf(stderr, "引数の個数が正しくありません\n");
-    return 1;
+  if(strcmp(argv[1], "-test")==0){
+    runtest();
+  }else{
+    if (argc != 2) {
+      fprintf(stderr, "引数の個数が正しくありません\n");
+      return 1;
+    }
+
+    tokenize(argv[1]);
+    Node *node = add();
+
+    printf(".intel_syntax noprefix\n");
+    printf(".global _main\n");
+    printf("_main:\n");
+
+    gen(node);
+
+    printf("  pop rax\n");
+    printf("  ret\n");
   }
-
-  tokenize(argv[1]);
-  Node *node = add();
-
-  printf(".intel_syntax noprefix\n");
-  printf(".global _main\n");
-  printf("_main:\n");
-
-  gen(node);
-
-  printf("  pop rax\n");
-  printf("  ret\n");
   return 0;
 }
