@@ -9,6 +9,10 @@ enum {
   TK_NUM = 256,
   TK_EOF,
   ND_NUM = 256,
+  TK_EQ,
+  TK_NE,
+  TK_LE,
+  TK_GE,
 };
 
 typedef struct {
@@ -24,8 +28,31 @@ typedef struct Node {
   int val;
 } Node;
 
+typedef struct Vector {
+  void **data;
+  int capacity;
+  int len;
+} Vector;
+
+Vector *new_vector() {
+  Vector *vec = malloc(sizeof(Vector));
+  vec->data = malloc(sizeof(void*)*16);
+  vec->capacity = 16;
+  vec->len = 0;
+  return vec;
+}
+
+Vector *vec_push(Vector *vec, void *elem){
+  if(vec->capacity == vec->len){
+    vec->capacity *= 2;
+    vec->data = realloc(vec->data, sizeof(void *) * vec->capacity);
+  }
+  vec->data[vec->len++] = elem;
+}
+
 Token tokens[100];
 int pos;
+Node *add();
 Node *mul();
 Node *unary();
 Node *term();
@@ -51,6 +78,19 @@ int consume(int ty) {
   }
   pos++;
   return 1;
+}
+
+Node *equality(){
+  Node *node = add();
+  for(;;){
+    if(consume(TK_EQ))
+      node = new_node(TK_EQ, node, add());
+    else if(consume(TK_NE))
+      node = new_node(TK_NE, node, add());
+    else
+      return node;
+  }
+
 }
 
 Node *add(){
@@ -111,6 +151,16 @@ void tokenize(char *p) {
       continue;
     }
 
+    if(*p=='='){
+      if(*p++=='='){
+        tokens[i].ty = TK_EQ;
+        p++;
+        tokens[i].input = p;
+        i++;
+        continue;
+      }
+    }
+
     if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')') {
       tokens[i].ty = *p;
       tokens[i].input = p;
@@ -148,6 +198,14 @@ void gen(Node *node) {
   printf("  pop rax\n");
 
   switch (node->ty) {
+  case TK_EQ:
+    printf("  cmp rax, rdi\n");
+    printf("  sete al\n");
+    printf("  movzx rax, al\n");
+  case TK_NE:
+    printf("  cmp rax, rdi\n");
+    printf("  sete al");
+    printf("  movzx rax, al");
   case '+':
     printf("  add rax, rdi\n");
     break;
@@ -197,7 +255,13 @@ int main(int argc, char **argv) {
     }
 
     tokenize(argv[1]);
-    Node *node = add();
+    int i;
+    for(i=0;i<4;i++){
+      printf("%s\n", "----");
+      printf("%d\n", tokens[i].ty);
+      printf("%s\n", tokens[i].input);
+    }
+    Node *node = equality();
 
     printf(".intel_syntax noprefix\n");
     printf(".global _main\n");
